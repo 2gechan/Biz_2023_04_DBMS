@@ -102,5 +102,172 @@
  Java의 데이터 클래스가 여기에 해당한다.
  */
  
+ -- 계좌정보
  
+ create table tbl_acc (
+	acNum	VARCHAR2(10)		PRIMARY KEY,
+    acDiv	VARCHAR2(1)	NOT NULL,
+    buId	VARCHAR2(5)	NOT NULL,
+	acBalance	NUMBER	DEFAULT 0
+ );
  
+ select * from tbl_buyer;
+ 
+ update tbl_buyer set butel='010-333-3333' where buid='0003';
+ 
+ select * from tbl_buyer;
+ 
+ -- update, delete 를 수행할 때는 PK 가 아닌 column을 기준으로 하지마라
+ -- 만약 PK가 아닌 column을 기준으로 할 때는 매우 신중하게 명령을 수행해야 한다
+ update tbl_buyer set butel='010-444-4444' where buname='임꺽정';
+ 
+ /*
+ tbl_buyer 테이블에 성춘향 데이터 중에서 전화번호가 없는 데이터가 있다
+ 전화번호가 없는 성춘향 데이터의 전화번호를 010-333-333으로변경하고자 한다
+ 
+ 1. buname column의 데이터가 성춘향인 리스트를 조회
+ select * from tbl_buyer where buname='성춘향';
+ 
+ 2. 전화번호가 없는(null) 데이터의 buid 값을 확인한다 : 0003
+ 
+ 3. buid(PK coulmn)을 기준으로 update를 실시
+ update tbl_buyer set butel = '010-333-333' where buid='0003';
+ */
+ 
+ -- buid column명 acBuID로 변경
+ ALTER TABLE tbl_acc RENAME COLUMN buid TO acBuId;
+ 
+ /*
+ 1. 전체 고객 데이터를 조회
+ 이몽룡의 주소가 현재 서울특별시 이다
+ 그런데 이몽룡이 전라북도 익산시로 이사했다
+ 2. 이몽룡의 주소를 서울특별시에서 전라북도 익산시로 변경하고자 한다.
+ */
+ 
+ select * from tbl_buyer where buname='이몽룡';
+ 
+ update tbl_buyer set buaddr='전라북도 익산시' where buid='0001';
+ 
+ select * from tbl_buyer;
+ 
+ -- 불필요한 데이터 삭제하기
+ delete from tbl_buyer
+ where buid = '0004';
+ 
+ select * from tbl_buyer;
+ 
+ -- 데이터 추가
+ -- 칼럼목록 개수, 순서 = 데이터목록 개수, 순서가 일치해야한다.
+ INSERT INTO [table] (칼럼목록) VALUES(데이터목록);
+ 
+ -- 데이터 조회
+ SELECT 칼럼목록 FROM [table] WHERE 칼럼 = 값;
+ 
+ -- 데이터 수정
+ UPDATE [table] SET 칼럼 = 값 --> 변경할 변수와 값
+                WHERE 칼럼 = 값 --> 변경할 조건
+                
+ -- 데이터 삭제
+ DELETE FROM [table] WHERE 칼럼 = 값 --> 삭제할 조건
+ 
+  -- 계좌정보
+ 
+ create table tbl_acc (
+	acNum	VARCHAR2(10)		PRIMARY KEY,
+    acDiv	VARCHAR2(1)	NOT NULL,
+    acBuId	VARCHAR2(5)	NOT NULL,
+	acBalance	NUMBER	DEFAULT 0
+ );
+ 
+ insert into tbl_acc(acNum, acDiv, acBuId, acBalance)
+ values('2023052301', '1', '0003', 10000);
+ 
+ insert into tbl_acc(acNum, acDiv, acBuId, acBalance)
+ values('2023052302', '1', '0001', 50000);
+ 
+ insert into tbl_acc(acNum, acDiv, acBuId, acBalance)
+ values('2023052303', '1', '0002', 10000);
+ 
+ select * from tbl_acc;
+ 
+ /*
+ 현재 계좌정보를 조회했는데
+ 계좌정보가 고객ID 뿐이어서 고객에 대한 이름, 전화번호 등을 알 수가 없다
+ 고객정보와 계좌정보를 연계하여 함께 볼 수 있도록 해야한다.
+ 
+ Table JOIN
+ 2개(이상)의 Table을 서로 연계하여 하나의 리스트로 보기
+ 
+ tbl_acc와 tbl_buyer 테이블을 연계하여 하나의 리스트로 보여라
+ 이 때 tbl_acc의 acbuid와 tbl_buyer의 buid 칼럼의 데이터를 비교하여
+ 같은 데이터는 한 라인에 보여라
+ */
+ 
+ select * from tbl_acc, tbl_buyer
+ where acbuid = buid;
+ 
+ -- join을 하되 4개의 컬럼만 화면에 나타내고 싶다
+ select acnum, acbuid, buname, butel 
+ from tbl_acc, tbl_buyer
+ where acbuid = buid;
+ 
+ select * from tbl_buyer;
+ 
+ -- Projection : select 조회를 할 때 별표(*)를 사용하지 않고 column을 나열하는 것
+ select buid, buname, butel, buaddr, bubirth, bujob
+ from tbl_buyer
+ order by buid;
+ 
+ select buid, buname, butel, buaddr, bubirth, bujob
+ from tbl_buyer
+ order by buname, butel;
+ 
+ insert into tbl_buyer(buid, buname, butel)
+ values('0004', '임꺽정', '010-444-4444');
+ 
+ /*
+ SQL Developer와 Java 코드에서 DB를 서로 연동하여 처리하는 경우 발생하는 문제
+ SQD 에서 데이터를 INSER, UPDATE, DELETE 를 수행하는 경우
+        추가, 수정, 삭제된 정보는 아직 storage에 반영되지 않고
+        메모리에 임시 저장된 상태이다
+ 이 상태일 때 JAVA 에서 SELECt 를 수행하면 INSER, UPDATE, DELETE 된 데이터가
+ 아닌 이전 상태의 데이터가 조회된다
+ 간혹 이 상황에서 DBMS가 Connection에서 무한정 응답하지 않는 경우도 있다
+ java는 DBMS 가 응답하기를 기다리면서 무한정 기다리고 마치 프로젝트가 멈춘(Down)
+ 상태가 되어 버린다.
+ 
+ SQD 에서 INSERT, UPDATE, DELETE 를 수행한 다음에는
+ 강제로 storage에 Commit을 해 주어야 한다.
+ 그래야만 Java 프로젝트에서 데이터를 조회할 수 있다.
+ */
+ COMMIT;
+ 
+ select * from tbl_buyer;
+ 
+ insert into tbl_buyer(buid, buname)
+ values('0005', '장길산');
+ 
+ -- commit 이 되기 전의 데이터를 취소하는 명령
+ ROLLBACK;
+ 
+ select * from tbl_buyer;
+ 
+ -- PK 칼럽을 기준으로 조건을 설정하여 조회하기
+ -- PK 칼럼을 기준으로 조회를 하면 데이터가 없거나 한개만 조회된다
+ select buid, buname, butel, buaddr, bubirth, bujob
+ from tbl_buyer
+ where buid = '0001';
+ 
+ insert into tbl_buyer(buid, buname, butel)
+ values('0001', '이몽룡', '010-111-1111');
+ 
+ update tbl_buyer
+ set buname = '',
+     butel = '',
+     buaddr = '',
+     bubirth = '',
+     bujob = '',
+ where buid = '';
+ 
+ select buid, buname, butel, buaddr, bubirth, bujob
+ from tbl_buyer;
